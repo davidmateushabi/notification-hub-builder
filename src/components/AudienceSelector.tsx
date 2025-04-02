@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Notification, UserClassification, UserType } from "@/types/notification";
 import { 
   Accordion, 
@@ -12,6 +12,7 @@ import {
   AccordionItem, 
   AccordionTrigger 
 } from "@/components/ui/accordion";
+import { toast } from "sonner";
 
 interface AudienceSelectorProps {
   audience: Notification["audience"];
@@ -33,8 +34,13 @@ const userClassificationOptions: { value: UserClassification; label: string }[] 
 
 const AudienceSelector = ({ audience, onChange }: AudienceSelectorProps) => {
   const [manualUserIds, setManualUserIds] = useState<string>("");
+  const [userCount, setUserCount] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   const handleSelectionMethodChange = (method: string) => {
+    // Reset user count when changing selection method
+    setUserCount(null);
+    
     onChange({
       ...audience,
       selectionMethod: method as Notification["audience"]["selectionMethod"],
@@ -88,6 +94,9 @@ const AudienceSelector = ({ audience, onChange }: AudienceSelectorProps) => {
       ...audience,
       userIds: userIdArray.length > 0 ? userIdArray : undefined,
     });
+    
+    // Update user count for manual selection
+    setUserCount(userIdArray.length);
   };
   
   const handleUserQueryChange = (query: string) => {
@@ -95,6 +104,28 @@ const AudienceSelector = ({ audience, onChange }: AudienceSelectorProps) => {
       ...audience,
       userQuery: query || undefined,
     });
+    
+    // Reset user count when query changes
+    setUserCount(null);
+  };
+  
+  const countUsersFromQuery = () => {
+    if (!audience.userQuery) {
+      toast.error("Please enter a valid SQL query first");
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    // Simulate API call to count users from query
+    setTimeout(() => {
+      // This is a mock implementation. In a real application, you would send
+      // the query to your backend and get the actual count.
+      const mockCount = Math.floor(Math.random() * 1000) + 1;
+      setUserCount(mockCount);
+      setIsLoading(false);
+      toast.success(`Query will target ${mockCount} users`);
+    }, 1000);
   };
 
   return (
@@ -199,6 +230,11 @@ const AudienceSelector = ({ audience, onChange }: AudienceSelectorProps) => {
             onChange={(e) => handleManualUserIdsChange(e.target.value)}
             className="min-h-[100px]"
           />
+          {userCount !== null && (
+            <div className="text-sm text-muted-foreground mt-1">
+              Target audience: <span className="font-medium text-foreground">{userCount} users</span>
+            </div>
+          )}
           <p className="text-sm text-muted-foreground">
             Enter the specific user IDs that should receive this notification
           </p>
@@ -215,10 +251,25 @@ const AudienceSelector = ({ audience, onChange }: AudienceSelectorProps) => {
             onChange={(e) => handleUserQueryChange(e.target.value)}
             className="min-h-[150px] font-mono text-sm"
           />
-          <p className="text-sm text-muted-foreground">
-            Enter a SQL query that returns user IDs. The query should return a column
-            named "id".
-          </p>
+          <div className="flex justify-between items-center mt-2">
+            <p className="text-sm text-muted-foreground">
+              Enter a SQL query that returns user IDs. The query should return a column
+              named "id".
+            </p>
+            <Button 
+              variant="secondary" 
+              size="sm"
+              onClick={countUsersFromQuery}
+              disabled={isLoading || !audience.userQuery}
+            >
+              {isLoading ? "Counting..." : "Count Users"}
+            </Button>
+          </div>
+          {userCount !== null && (
+            <div className="mt-2 p-2 bg-muted rounded-md text-sm">
+              This query will target <span className="font-medium">{userCount} users</span>
+            </div>
+          )}
         </div>
       )}
     </div>
